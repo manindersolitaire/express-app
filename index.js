@@ -2,13 +2,10 @@ import express from 'express'
 import { searchController, usernameController } from './controller.js'
 import router from './route.js'
 import multer from 'multer'
-
-const storage =  multer.diskStorage({
-    destination :'uploads',
-    filename : (req,file,cb) => {
-        cb(null,file.originalname)
-    }
-})
+import mongoose from 'mongoose'
+import storage from './config/multer.js'
+import { connectDb } from './config/db.js'
+import Person from './models/Person.js'
 
 const app = express()
 const upload = multer(
@@ -21,6 +18,8 @@ const upload = multer(
 )
 const PORT = 3000
 
+await connectDb()
+
 app.use(express.urlencoded({extended : true}))
 app.use(upload.single('image'))
 // set EJS as the view engine
@@ -31,9 +30,25 @@ app.use(upload.single('image'))
 // app.use('/images',express.static('images'))
 
 
-app.use((req,res,next)=>{
-      console.log('A new request received at'+Date.now())
-      next()
+// app.use((req,res,next)=>{
+//       console.log('A new request received at'+Date.now())
+//       next()
+// })
+app.post('/person', express.json() , async (req,res)=>{
+    console.log(req.body)
+    const {email , name , age} = req.body;
+
+    const newPerson = new Person({
+        email,
+        name,
+        age
+    })
+    await newPerson.save()
+    console.log(newPerson)
+    res.json({
+        msg : 'Person Added'
+    })
+     
 })
 
 
@@ -58,29 +73,34 @@ app.use('/search',router)
 //     })
 // })
 
-// app.put('/users/:id',express.json() ,(req,res)=>{
-//     const userId = req.params.id
-//     const {name,email} = req.body
+app.put('/person',express.json() ,async(req,res)=>{
+   const { id } = req.body
+    const personData =  await Person.findByIdAndUpdate(id, {
+        age : 28
+    })
+    // personData.name = 'Maninder Singh'
+    // await personData.save()
+    console.log(personData)
 
-//     res.json({
-//         msg : `User ${userId} updated ${name}, ${email}`
-//     })
+    res.json({
+        msg : 'Data fetched successfully',
+    })
 
-// })
-
-// app.delete('/users/:id',express.json() ,(req,res)=>{
-//         const userId = req.params.id
-//         res.json({
-//             msg : `User ${userId} deleted successfully`
-//         })
-// })
-
-app.post('/form', (req,res)=>{
-    console.log(req.body)
-    console.log(req.file)
-
-    res.send('Form Data Received..')
 })
+
+app.delete('/person/:id',express.json() ,(req,res)=>{
+        const userId = req.params.id
+        res.json({
+            msg : `User ${userId} deleted successfully`
+        })
+})
+
+// app.post('/form', (req,res)=>{
+//     console.log(req.body)
+//     console.log(req.file)
+
+//     res.send('Form Data Received..')
+// })
 
 app.listen(PORT, ()=>{
     console.log(`Server is running on http://localhost:${PORT}`)
